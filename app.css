@@ -282,3 +282,9 @@ textarea.memo:focus{border-color:var(--fg);outline:0}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .elist,.erow{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* route view */
+.step-h .splace{display:block;font-size:12px;color:var(--mute);letter-spacing:.02em;margin-bottom:2px}
+.step-h .sdetail{display:block;font-size:14px;margin-top:3px}
+.step-h .sstat .own{color:var(--fg);font-weight:600}
+.step-h .sno b{font-size:26px}
+.after-h{margin-top:56px}

@@ -12,8 +12,7 @@
   function seed(project){
     const now=new Date().toISOString();
     return {
-      schema:2, projectId:project.id, createdAt:now, updatedAt:now,
-      crew:project.crew.map(c=>({id:c.id,name:c.name||''})),
+      schema:3, projectId:project.id, createdAt:now, updatedAt:now,
       shots:project.shots.map(s=>Object.assign(clone(s),{projectId:project.id,status:'todo',statusAt:null,updatedAt:now})),
       refs:project.refs.map(r=>Object.assign(clone(r),{projectId:project.id})),
       notes:project.steps.map(s=>({id:'note-'+s.id,stepId:s.id,text:''})),
@@ -31,11 +30,36 @@
     }catch(e){}
   }
 
+  // schema 2 (steps by surgery phase, per-device crew) -> schema 3 (steps by the day's route)
+  function fromSchema2(old,project){
+    const next=seed(project); const map=project.legacyStepMap||{};
+    const seedIds=new Set(next.shots.map(s=>s.id));
+    const oldById=Object.fromEntries((old.shots||[]).map(s=>[s.id,s]));
+    const legacyCodes=/^[REBDA]\d{2}$/;
+    const keep=['title','content','method','angle','action','caution','use','required','retakeable','memo','usage','status','statusAt'];
+    // cuts deleted on site stay deleted
+    next.shots=next.shots.filter(s=>!(legacyCodes.test(s.id)&&['B12','D06','D07','A11'].indexOf(s.id)<0&&!oldById[s.id]));
+    next.shots.forEach(s=>{const o=oldById[s.id]; if(o) keep.forEach(k=>{if(o[k]!==undefined) s[k]=o[k];});});
+    (old.shots||[]).filter(s=>!seedIds.has(s.id)).forEach(s=>{
+      const st=map[s.stepId]||s.stepId; const last=next.shots.filter(x=>x.stepId===st).reduce((m,x)=>Math.max(m,x.sort),0);
+      next.shots.push(Object.assign({},s,{stepId:st,sort:last+10,assignee:typeof s.assignee==='string'&&!/^c\d$/.test(s.assignee)?s.assignee:null}));
+    });
+    const ids=new Set(next.shots.map(s=>s.id));
+    (old.refs||[]).filter(r=>!r.builtIn&&ids.has(r.shotId)).forEach(r=>next.refs.push(r));
+    next.refs=next.refs.filter(r=>ids.has(r.shotId));
+    (old.notes||[]).forEach(n=>{if(!n.text) return; const t=next.notes.find(x=>x.stepId===(map[n.stepId]||n.stepId)); if(t) t.text=(t.text?t.text+'\n':'')+n.text;});
+    next.trash=(old.trash||[]).map(t=>Object.assign({},t,{shot:Object.assign({},t.shot,{stepId:map[t.shot.stepId]||t.shot.stepId})}));
+    next.prefs=old.prefs||next.prefs;
+    return next;
+  }
+
   const LocalAdapter={
     load(project){
       let state=null;
       try{const raw=localStorage.getItem(key(project.id)); if(raw) state=JSON.parse(raw);}catch(e){}
-      if(!state||state.schema!==2){state=seed(project); migrateLegacy(state); this.save(state);}
+      if(state&&state.schema===2) state=fromSchema2(state,project);
+      if(!state||state.schema!==3){state=seed(project); migrateLegacy(state);}
+      this.save(state);
       return state;
     },
     save(state){
