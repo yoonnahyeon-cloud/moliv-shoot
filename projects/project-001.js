@@ -19,6 +19,7 @@
   ]
  ],
  "note": "",
+ "textFixes": [{"id": "T1", "field": "caution", "from": "개인정보입니다. 전달 후 촬영 기기에서 지우고 콘텐츠에 쓰지 않습니다.", "to": "계약서 작성을 위해 필요하여 요청했습니다."}],
  "refVideos": [
   {"type": "체험형", "src": "ref/experience-ref.mp4", "poster": "ref/experience-ref.jpg", "title": "관찰자 시점 상담·디자인"},
   {"type": "후기형", "src": "ref/review-ref.mp4", "poster": "ref/review-ref.jpg", "title": "셀카 후기"},
@@ -120,7 +121,7 @@
    "angle": "",
    "action": "",
    "method": "",
-   "caution": "개인정보입니다. 전달 후 촬영 기기에서 지우고 콘텐츠에 쓰지 않습니다.",
+   "caution": "계약서 작성을 위해 필요하여 요청했습니다.",
    "use": "",
    "required": false,
    "retakeable": true,

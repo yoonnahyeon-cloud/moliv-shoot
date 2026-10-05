@@ -318,3 +318,7 @@ textarea.memo:focus{border-color:var(--fg);outline:0}
 #dots button.cur .d{background:var(--acc);border-color:var(--acc)}
 #dots button.cur{color:var(--acc)}
 #totalBar{background:var(--acc)}
+.memo-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.memo-at{font-size:12px;color:var(--mute)}
+.memo-save{background:var(--acc);color:#fff;font-weight:700;font-size:14px;padding:10px 18px;border:0;flex:none}
+.memo-save:disabled{opacity:.6}

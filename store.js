@@ -59,6 +59,8 @@
       try{const raw=localStorage.getItem(key(project.id)); if(raw) state=JSON.parse(raw);}catch(e){}
       // the plan was rewritten for the shoot day (schema 4); older saved states are replaced, not merged
       if(!state||state.schema!==(project.schema||4)){state=seed(project);}
+      // wording fixes to built-in cuts reach phones that already saved state, unless the cut was edited on site
+      (project.textFixes||[]).forEach(f=>{const x=state.shots.find(s=>s.id===f.id); if(x&&x[f.field]===f.from) x[f.field]=f.to;});
       this.save(state);
       return state;
     },

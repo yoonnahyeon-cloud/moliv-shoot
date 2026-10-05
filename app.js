@@ -166,7 +166,8 @@ function stepBody(st){
     <div>${rest.length||!reqs.length?`<div class="sub">${st.shoot===false?'할 일':'촬영 컷'} · ${rest.length}</div>`:''}
       ${rest.length?`<div class="cuts">${rest.map(row).join('')}</div>`:(reqs.length?'':'<div class="empty">아직 등록한 컷이 없습니다.</div>')}
       <button class="addcut" data-act="add" data-step="${st.id}"><b>+</b>컷 추가</button></div>
-    <div><div class="sub">현장 메모</div><textarea class="memo" data-note="${st.id}" placeholder="이 단계 메모">${esc(note.text)}</textarea></div>`;
+    <div><div class="sub">현장 메모</div><textarea class="memo" data-note="${st.id}" placeholder="이 단계 메모">${esc(note.text)}</textarea>
+      <div class="memo-bar"><span class="memo-at" data-memoat="${st.id}">${memoAt(note)}</span><button class="memo-save" data-act="memosave" data-step="${st.id}">저장</button></div></div>`;
 }
 function editBody(st){
   const list=shotsOf(st.id);
@@ -433,6 +434,7 @@ document.addEventListener('click',e=>{
     case 'reset': confirmBox('처음 기획으로 되돌릴까요?','체크, 메모, 추가하거나 수정한 컷이 모두 처음 기획 상태로 돌아갑니다. 먼저 백업 내보내기를 권장합니다.','되돌리기',()=>{S=adapter.reset(P); open=new Set(['s:'+currentStep()]); renderCrew(); renderAll(); toast('처음 기획으로 되돌렸습니다');}); break;
     case 'gifzoom': { const st=STEP[a.dataset.step]; showLayer(`<div class="lightbox" role="dialog" aria-label="레퍼런스"><div class="lb-h"><span class="c">${esc(st.no)}. ${esc(st.name)} · ${esc(st.gifLabel||'')}</span><button class="x" data-close aria-label="닫기">×</button></div><div class="lb-m"><img src="${esc(st.gif)}" alt=""></div></div>`,'full');
       layer.onclick=e=>{if(e.target.closest('[data-close]')){closeLayer(); layer.onclick=null;}}; break; }
+    case 'memosave': memoSave(a.dataset.step,a); break;
     case 'outref': { const box=$(`[data-outrefs="${a.dataset.out}"]`); const o=P.outputs.find(x=>x.id===a.dataset.out);
       if(box.hidden&&!box.dataset.done){box.dataset.done='1'; box.innerHTML=o.refs.map(r=>`<figure>${r.type==='video'?`<video src="${esc(r.src)}" poster="${esc(r.poster||'')}" controls playsinline preload="none"></video>`:`<img src="${esc(r.src)}" alt="${esc(r.title)}" loading="lazy">`}<figcaption>${esc(r.title)}</figcaption></figure>`).join('');}
       box.hidden=!box.hidden; a.setAttribute('aria-expanded',String(!box.hidden)); a.textContent=box.hidden?`레퍼런스 ${o.refs.length}개 보기`:'레퍼런스 접기'; break; }
@@ -441,13 +443,47 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset.crew){const c=S.crew.find(x=>x.id===t.dataset.crew)||(S.crew.push({id:t.dataset.crew,name:''}),S.crew[S.crew.length-1]); c.name=t.value; save();}
-  if(t.dataset.note){let n=S.notes.find(x=>x.stepId===t.dataset.note); if(!n){n={id:'note-'+t.dataset.note,stepId:t.dataset.note,text:''}; S.notes.push(n);} n.text=t.value; save();}
+  if(t.dataset.note){const n=noteOf(t.dataset.note); n.text=t.value; n.dirty=true; save(); const at=$(`[data-memoat="${t.dataset.note}"]`); if(at) at.textContent=memoAt(n);}
 });
 document.addEventListener('change',e=>{if(e.target.dataset.crew){renderSteps(); renderMissing();}});
 
 /* keep the screen awake on set */
 let lock=null; async function wake(){try{if('wakeLock' in navigator&&!lock&&document.visibilityState==='visible'){lock=await navigator.wakeLock.request('screen'); lock.addEventListener('release',()=>lock=null);}}catch(e){}}
 document.addEventListener('pointerdown',wake,{once:true}); document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') wake();});
+
+/* ---------- shared step memos ----------
+   Saved memos are published to a shared ntfy.sh topic so everyone with the site sees them.
+   ntfy.sh keeps messages for about 12 hours; each phone also keeps its own copy in localStorage. */
+const MEMO_URL='https://ntfy.sh/moliv-shoot-'+P.id+'-memo-7kq2x9';
+function noteOf(stepId){let n=S.notes.find(x=>x.stepId===stepId); if(!n){n={id:'note-'+stepId,stepId,text:''}; S.notes.push(n);} return n;}
+const hm=t=>{const d=new Date(t); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+function memoAt(n){ if(n.dirty) return '저장 안 됨 · 저장을 눌러야 다른 사람에게 보여요'; return n.sharedAt?`공유됨 · ${hm(n.sharedAt)}`:''; }
+async function memoSave(stepId,btn){
+  const ta=$(`[data-note="${stepId}"]`); const n=noteOf(stepId); if(ta) n.text=ta.value;
+  const at=Date.now(); btn.disabled=true; btn.textContent='저장 중';
+  try{
+    const r=await fetch(MEMO_URL,{method:'POST',body:JSON.stringify({p:P.id,stepId,text:n.text,at})});
+    if(!r.ok) throw new Error(r.status);
+    n.dirty=false; n.sharedAt=at; save(); toast('메모를 저장했습니다. 다른 사람도 볼 수 있어요');
+  }catch(e){toast('저장하지 못했습니다. 인터넷 연결을 확인해 주세요');}
+  btn.disabled=false; btn.textContent='저장';
+  const el=$(`[data-memoat="${stepId}"]`); if(el) el.textContent=memoAt(n);
+}
+async function memoPull(){
+  try{
+    const r=await fetch(MEMO_URL+'/json?poll=1&since=all'); if(!r.ok) return;
+    const latest={};
+    (await r.text()).split('\n').forEach(line=>{ if(!line.trim()) return; try{const m=JSON.parse(line); if(m.event!=='message') return; const d=JSON.parse(m.message); if(d.p!==P.id||!d.stepId) return; if(!latest[d.stepId]||d.at>latest[d.stepId].at) latest[d.stepId]=d;}catch(e){} });
+    let changed=false;
+    Object.values(latest).forEach(d=>{const n=noteOf(d.stepId); if(n.dirty||(n.sharedAt&&n.sharedAt>=d.at)) return;
+      n.text=d.text; n.sharedAt=d.at; changed=true;
+      const ta=$(`[data-note="${d.stepId}"]`); if(ta&&document.activeElement!==ta) ta.value=d.text;
+      const el=$(`[data-memoat="${d.stepId}"]`); if(el) el.textContent=memoAt(n);});
+    if(changed) save();
+  }catch(e){}
+}
+memoPull(); setInterval(()=>{if(document.visibilityState==='visible') memoPull();},20000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') memoPull();});
 
 /* ---------- boot ---------- */
 document.title=`MOLIV ${P.id} 촬영 콜시트`;
