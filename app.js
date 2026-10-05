@@ -117,7 +117,9 @@ function renderHero(){
     <div class="meta"><span class="mono">${esc(P.dateLabel)}</span><span>${esc(P.model)}</span></div>
     <div class="today"><div class="eyebrow ko">촬영</div><div class="crewline">${P.crewLine.map(([n,e])=>`<span><b>${esc(n)}</b> ${esc(e)}</span>`).join('')}</div>
     ${P.note?`<p class="hnote">${esc(P.note)}</p>`:''}</div>`;
-  $('#outputs').hidden=true;
+  const rv=P.refVideos||[]; const out=$('#outputs'); out.hidden=!rv.length;
+  out.innerHTML=rv.length?`<div class="bh"><h2>레퍼런스 영상</h2><span class="side">${rv.length}개</span></div>
+    <div class="rvids">${rv.map(r=>`<figure><video src="${esc(r.src)}" poster="${esc(r.poster||'')}" controls playsinline muted preload="none"></video><figcaption><b>${esc(r.type)}</b> ${esc(r.title||'')}</figcaption></figure>`).join('')}</div>`:'';
 }
 function renderCrew(){ $('#crew').hidden=true; }
 function renderTop(){
@@ -158,7 +160,8 @@ function stepBody(st){
   const list=shotsOf(st.id);
   const reqs=[], rest=list;
   const note=S.notes.find(n=>n.stepId===st.id)||{text:''};
-  return `${st.note?`<p class="step-note">${esc(st.note)}</p>`:''}
+  return `${st.gif?`<button class="sgif" data-act="gifzoom" data-step="${st.id}" aria-label="레퍼런스 크게 보기"><img src="${esc(st.gif)}" alt="" loading="lazy"><span>레퍼런스 · ${esc(st.gifLabel||'')}</span></button>`:''}
+    ${st.note?`<p class="step-note">${esc(st.note)}</p>`:''}
     ${reqs.length?`<div><div class="sub">필수 컷 · ${reqs.length}</div><div class="reqs">${reqs.map(card).join('')}</div></div>`:''}
     <div>${rest.length||!reqs.length?`<div class="sub">${st.shoot===false?'할 일':'촬영 컷'} · ${rest.length}</div>`:''}
       ${rest.length?`<div class="cuts">${rest.map(row).join('')}</div>`:(reqs.length?'':'<div class="empty">아직 등록한 컷이 없습니다.</div>')}
@@ -428,6 +431,8 @@ document.addEventListener('click',e=>{
     case 'export': exportJSON(); break;
     case 'import': $('#importFile').click(); break;
     case 'reset': confirmBox('처음 기획으로 되돌릴까요?','체크, 메모, 추가하거나 수정한 컷이 모두 처음 기획 상태로 돌아갑니다. 먼저 백업 내보내기를 권장합니다.','되돌리기',()=>{S=adapter.reset(P); open=new Set(['s:'+currentStep()]); renderCrew(); renderAll(); toast('처음 기획으로 되돌렸습니다');}); break;
+    case 'gifzoom': { const st=STEP[a.dataset.step]; showLayer(`<div class="lightbox" role="dialog" aria-label="레퍼런스"><div class="lb-h"><span class="c">${esc(st.no)}. ${esc(st.name)} · ${esc(st.gifLabel||'')}</span><button class="x" data-close aria-label="닫기">×</button></div><div class="lb-m"><img src="${esc(st.gif)}" alt=""></div></div>`,'full');
+      layer.onclick=e=>{if(e.target.closest('[data-close]')){closeLayer(); layer.onclick=null;}}; break; }
     case 'outref': { const box=$(`[data-outrefs="${a.dataset.out}"]`); const o=P.outputs.find(x=>x.id===a.dataset.out);
       if(box.hidden&&!box.dataset.done){box.dataset.done='1'; box.innerHTML=o.refs.map(r=>`<figure>${r.type==='video'?`<video src="${esc(r.src)}" poster="${esc(r.poster||'')}" controls playsinline preload="none"></video>`:`<img src="${esc(r.src)}" alt="${esc(r.title)}" loading="lazy">`}<figcaption>${esc(r.title)}</figcaption></figure>`).join('');}
       box.hidden=!box.hidden; a.setAttribute('aria-expanded',String(!box.hidden)); a.textContent=box.hidden?`레퍼런스 ${o.refs.length}개 보기`:'레퍼런스 접기'; break; }
