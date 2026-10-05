@@ -82,8 +82,8 @@
   },
   {
    "id": "d5",
-   "gif": "ref/gif/step5.gif",
-   "gifLabel": "디자인된 헤어라인 보여주기",
+   "gif": "ref/gif/step5b.gif",
+   "gifLabel": "헤어밴드 대각선·옆",
    "phase": "today",
    "no": "5",
    "name": "디자인 후 촬영",
