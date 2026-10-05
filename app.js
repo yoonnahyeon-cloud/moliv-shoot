@@ -115,7 +115,7 @@ function renderHero(){
   $('#overview').innerHTML=`<div class="eyebrow">${esc(P.code)}</div>
     <h1>${esc(P.title)}</h1>
     <div class="meta"><span class="mono">${esc(P.dateLabel)}</span><span>${esc(P.model)}</span></div>
-    <div class="today"><div class="eyebrow">촬영</div><div class="crewline">${P.crewLine.map(([n,e])=>`<span><b>${esc(n)}</b> ${esc(e)}</span>`).join('')}</div>
+    <div class="today"><div class="eyebrow ko">촬영</div><div class="crewline">${P.crewLine.map(([n,e])=>`<span><b>${esc(n)}</b> ${esc(e)}</span>`).join('')}</div>
     ${P.note?`<p class="hnote">${esc(P.note)}</p>`:''}</div>`;
   $('#outputs').hidden=true;
 }
@@ -159,7 +159,7 @@ function stepBody(st){
   const reqs=[], rest=list;
   const note=S.notes.find(n=>n.stepId===st.id)||{text:''};
   return `${st.note?`<p class="step-note">${esc(st.note)}</p>`:''}
-    ${reqs.length?`<div><div class="sub">필수컷 · ${reqs.length}</div><div class="reqs">${reqs.map(card).join('')}</div></div>`:''}
+    ${reqs.length?`<div><div class="sub">필수 컷 · ${reqs.length}</div><div class="reqs">${reqs.map(card).join('')}</div></div>`:''}
     <div>${rest.length||!reqs.length?`<div class="sub">${st.shoot===false?'할 일':'촬영 컷'} · ${rest.length}</div>`:''}
       ${rest.length?`<div class="cuts">${rest.map(row).join('')}</div>`:(reqs.length?'':'<div class="empty">아직 등록한 컷이 없습니다.</div>')}
       <button class="addcut" data-act="add" data-step="${st.id}"><b>+</b>컷 추가</button></div>
@@ -274,11 +274,11 @@ function editSheet(id,opt={}){
       <div class="fld"><span class="l">콘텐츠 용도</span>${chips('usage',USAGES.map(u=>[u,u]),s.usage,false)}</div>
       <div class="fld"><label for="f-as">담당자</label><input id="f-as" name="assignee" type="text" value="${esc(s.assignee&&!/^c\d$/.test(s.assignee)?s.assignee:'')}" placeholder="비워 두면 단계 담당(${esc((STEP[s.stepId]||{}).owner||'없음')})" autocomplete="off"></div>
       <div class="fld"><label for="f-content">촬영 내용</label><textarea id="f-content" name="content">${esc(s.content)}</textarea></div>
-      <div class="fld"><label for="f-method">촬영 방법</label><textarea id="f-method" name="method" placeholder="비워 두면 장비 기본 방법이 표시됩니다">${esc(s.method)}</textarea></div>
+      <div class="fld"><label for="f-method">촬영 방법</label><textarea id="f-method" name="method" placeholder="예) 사진과 영상 모두">${esc(s.method)}</textarea></div>
       <div class="fld"><label for="f-angle">촬영 구도</label><input id="f-angle" name="angle" type="text" value="${esc(s.angle)}"></div>
       <div class="fld"><label for="f-action">모델 행동</label><input id="f-action" name="action" type="text" value="${esc(s.action)}"></div>
       <div class="fld"><label for="f-caution">주의사항</label><textarea id="f-caution" name="caution">${esc(s.caution)}</textarea></div>
-      <div class="two"><label class="toggle">필수컷<input type="checkbox" name="required" ${s.required?'checked':''}></label><label class="toggle">재촬영 가능<input type="checkbox" name="retakeable" ${s.retakeable?'checked':''}></label></div>
+      <div class="two"><label class="toggle">필수 컷<input type="checkbox" name="required" ${s.required?'checked':''}></label><label class="toggle">재촬영 가능<input type="checkbox" name="retakeable" ${s.retakeable?'checked':''}></label></div>
       <div class="fld"><span class="l">레퍼런스</span><div class="reflist" data-reflist>${(isNew?[]:refsOf(id)).map(refItem).join('')}</div>${refAdder()}</div>
       <div class="fld"><label for="f-memo">메모</label><textarea id="f-memo" name="memo">${esc(s.memo)}</textarea></div>
     </div>
@@ -366,8 +366,8 @@ function reqView(){
     const left=l.filter(s=>s.status!=='done').length;
     return `<div class="rv-g"><h3><span class="eyebrow">${esc(st.phase==='today'?(st.no+'. '+(st.place||'')):(st.when||''))}</span>${esc(st.name)}<span class="who-t">${left?left+'개 남음':'완료'}</span></h3><div class="reqs">${l.map(card).join('')}</div></div>`;}).join('');
   const total=S.shots.filter(s=>s.required&&visible(s)); const left=total.filter(s=>s.status!=='done').length;
-  rvBox.innerHTML=`<div class="rv-h"><div class="wrap"><div><h2>필수컷</h2><div class="c">${left}개 남음</div></div><button class="x" data-act="rvclose" aria-label="닫기">×</button></div></div>
-    <div class="wrap" style="padding-bottom:60px">${groups||'<p class="ok">필수컷이 없습니다.</p>'}</div>`;
+  rvBox.innerHTML=`<div class="rv-h"><div class="wrap"><div><h2>필수 컷</h2><div class="c">${left}개 남음</div></div><button class="x" data-act="rvclose" aria-label="닫기">×</button></div></div>
+    <div class="wrap" style="padding-bottom:60px">${groups||'<p class="ok">필수 컷이 없습니다.</p>'}</div>`;
   rvBox.hidden=false; rvBox.scrollTop=0; document.body.style.overflow='hidden'; hydrate(rvBox);
 }
 function closeReqView(){$$('video',rvBox).forEach(v=>v.pause()); rvBox.hidden=true; rvBox.innerHTML=''; document.body.style.overflow=''; renderAll();}
