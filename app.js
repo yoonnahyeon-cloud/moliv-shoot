@@ -72,7 +72,7 @@ const io='IntersectionObserver' in window?new IntersectionObserver(es=>{
 const devTags=()=>'';
 const whoTag=s=>whoText(s)?`<span class="who-t">담당 ${esc(whoText(s))}</span>`:'';
 const useTag=u=>u?`<span class="use">${esc(u)}</span>`:'';
-const reqTags=s=>s.required?`<span class="req-t">필수${s.retakeable?'':' · 재촬영 불가'}</span>`:(!s.retakeable?'<span class="req-t">재촬영 불가</span>':'');
+const reqTags=()=>'';
 const stBtn=s=>`<button class="stb" data-act="cycle" aria-label="상태 ${STATUS[s.status]}, 눌러서 변경"><span class="sq">${s.status==='done'?'✓':s.status==='retake'?'R':''}</span><span class="lb">${STATUS[s.status]}</span></button>`;
 
 function card(s){
@@ -115,17 +115,9 @@ function renderHero(){
   $('#overview').innerHTML=`<div class="eyebrow">${esc(P.code)}</div>
     <h1>${esc(P.title)}</h1>
     <div class="meta"><span class="mono">${esc(P.dateLabel)}</span><span>${esc(P.model)}</span></div>
-    <div class="today"><div class="eyebrow">오늘의 촬영</div><div class="big">${P.summary.map(esc).join('<em>+</em>')}</div></div>`;
-  $('#outputs').innerHTML=`<div class="bh"><h2>결과물</h2><span class="side">${P.outputs.length}개</span></div>`+
-    P.outputs.map(o=>`<div class="out">
-      <div class="no">${o.no}</div><h3>${esc(o.name)}</h3>
-      <div class="body">
-        <p>${esc(o.desc)}</p>
-        ${o.keys?`<ul class="keys">${o.keys.map(k=>`<li>${esc(k)}</li>`).join('')}</ul>`:''}
-        ${o.flow?`<div class="flow">${o.flow.map(esc).join('<i>→</i>')}</div>`:''}
-        ${o.note?`<p class="note">${esc(o.note)}</p>`:''}
-        ${o.refs&&o.refs.length?`<button class="reflink" data-act="outref" data-out="${o.id}" aria-expanded="false">레퍼런스 ${o.refs.length}개 보기</button><div class="refrow" data-outrefs="${o.id}" hidden></div>`:''}
-      </div></div>`).join('');
+    <div class="today"><div class="eyebrow">촬영</div><div class="crewline">${P.crewLine.map(([n,e])=>`<span><b>${esc(n)}</b> ${esc(e)}</span>`).join('')}</div>
+    ${P.note?`<p class="hnote">${esc(P.note)}</p>`:''}</div>`;
+  $('#outputs').hidden=true;
 }
 function renderCrew(){ $('#crew').hidden=true; }
 function renderTop(){
@@ -141,7 +133,7 @@ function stepHead(st,isOpen,cur){
     <span class="sno">${st.phase==='today'?'':'STEP'}<b>${esc(st.no)}</b></span>
     <span><span class="splace">${esc([st.when,st.place].filter(Boolean).join(' · '))}</span><h3>${esc(st.name)}</h3>
       <span class="sdetail">${esc(st.detail||'')}</span>
-      <span class="sstat">${st.owner?`<span class="own">담당 ${esc(st.owner)}</span>`:''}<span>${s.total?(s.complete?'완료':s.done+' / '+s.total):'컷 없음'}</span>${s.reqLeft?`<span class="r">필수 ${s.reqLeft}개 남음</span>`:''}</span></span>
+      <span class="sstat">${st.owner?`<span class="own">담당 ${esc(st.owner)}</span>`:''}<span>${s.total?(s.complete?'완료':s.done+' / '+s.total):'컷 없음'}</span>${st.shoot===false?'<span>촬영 없음</span>':''}</span></span>
     <span style="display:flex;gap:10px;align-items:center">${st.id===cur&&!s.complete?'<span class="now">NOW</span>':''}<span class="chev">›</span></span>
   </button>`;
 }
@@ -154,9 +146,9 @@ function stepBlock(st,cur){
 }
 function renderSteps(){
   const cur=currentStep(); const after=P.steps.filter(s=>s.phase!=='today');
-  $('#steps').innerHTML=`<div class="bh"><h2>오늘 동선</h2><span class="side">수술 당일 · ${TODAY.length}곳</span></div>
+  $('#steps').innerHTML=`<div class="bh"><h2>오늘 동선</h2><span class="side">${TODAY.length}단계</span></div>
     ${editMode?`<div class="editbar"><span>컷을 끌어서 순서나 단계를 바꾸세요</span><button data-act="editdone">완료</button></div>`
-      :`<div class="tools"><button class="tbtn solid" data-act="reqview">필수컷만 보기</button><button class="tbtn ghost" data-act="editmode">촬영 순서 편집</button></div>`}
+      :`<div class="tools"><button class="tbtn ghost" data-act="editmode">촬영 순서 편집</button></div>`}
     ${TODAY.map(st=>stepBlock(st,cur)).join('')}
     ${after.length?`<div class="bh after-h"><h2>수술 이후</h2><span class="side">경과 촬영 ${after.length}회</span></div>${after.map(st=>stepBlock(st,cur)).join('')}`:''}`;
   hydrate($('#steps'));
@@ -164,11 +156,11 @@ function renderSteps(){
 }
 function stepBody(st){
   const list=shotsOf(st.id);
-  const reqs=list.filter(s=>s.required), rest=list.filter(s=>!s.required);
+  const reqs=[], rest=list;
   const note=S.notes.find(n=>n.stepId===st.id)||{text:''};
   return `${st.note?`<p class="step-note">${esc(st.note)}</p>`:''}
     ${reqs.length?`<div><div class="sub">필수컷 · ${reqs.length}</div><div class="reqs">${reqs.map(card).join('')}</div></div>`:''}
-    <div>${rest.length||!reqs.length?`<div class="sub">${reqs.length?'그 밖의 컷':'촬영 컷'} · ${rest.length}</div>`:''}
+    <div>${rest.length||!reqs.length?`<div class="sub">${st.shoot===false?'할 일':'촬영 컷'} · ${rest.length}</div>`:''}
       ${rest.length?`<div class="cuts">${rest.map(row).join('')}</div>`:(reqs.length?'':'<div class="empty">아직 등록한 컷이 없습니다.</div>')}
       <button class="addcut" data-act="add" data-step="${st.id}"><b>+</b>컷 추가</button></div>
     <div><div class="sub">현장 메모</div><textarea class="memo" data-note="${st.id}" placeholder="이 단계 메모">${esc(note.text)}</textarea></div>`;
@@ -179,14 +171,14 @@ function editBody(st){
     <span class="t">${esc(s.title)}<span class="tags">${useTag(s.usage)}${s.required?'<span class="req-t">필수</span>':''}</span></span></div>`).join('')}</div>`;
 }
 function renderMissing(){
-  const inToday=s=>(STEP[s.stepId]||{}).phase==='today';
+  const inToday=s=>(STEP[s.stepId]||{}).shoot!==false;
   const req=S.shots.filter(s=>s.required&&s.status!=='done'&&inToday(s)); const re=S.shots.filter(s=>s.status==='retake');
   const total=S.shots.filter(s=>s.required&&inToday(s)).length;
   const li=s=>`<li><button data-act="jump" data-id="${s.id}"><span>${esc(s.title)}</span><span class="s ${s.status==='retake'?'r':''}">${STATUS[s.status]}</span></button></li>`;
   const groups=TODAY.map(st=>{const l=req.filter(s=>s.stepId===st.id).sort((a,b)=>a.sort-b.sort); return l.length?`<div class="mgroup"><h3>${esc(st.no)}. ${esc(st.name)} <span class="who-t">${esc(st.place||'')}</span></h3><ul class="mlist">${l.map(li).join('')}</ul></div>`:'';}).join('');
-  $('#missing').innerHTML=`<div class="bh"><h2>오늘 빠뜨린 컷</h2><span class="side">오늘 필수 ${total}컷 기준</span></div>
-    <div class="miss-top"><div class="${req.length?'bad':''}"><b>${req.length}</b><small>필수컷 미완료</small></div><div class="${re.length?'bad':''}"><b>${re.length}</b><small>재촬영 필요</small></div></div>
-    ${req.length?groups:'<p class="ok">오늘 필수컷을 모두 촬영했습니다.</p>'}
+  $('#missing').innerHTML=`<div class="bh"><h2>빠뜨린 컷</h2><span class="side">촬영 ${total}컷 기준</span></div>
+    <div class="miss-top"><div class="${req.length?'bad':''}"><b>${req.length}</b><small>아직 안 찍은 컷</small></div><div class="${re.length?'bad':''}"><b>${re.length}</b><small>재촬영 필요</small></div></div>
+    ${req.length?groups:'<p class="ok">모든 컷을 촬영했습니다.</p>'}
     ${re.length?`<div class="mgroup"><h3>재촬영 필요</h3><ul class="mlist">${re.map(li).join('')}</ul></div>`:''}`;
 }
 function renderFoot(){

@@ -12,7 +12,7 @@
   function seed(project){
     const now=new Date().toISOString();
     return {
-      schema:3, projectId:project.id, createdAt:now, updatedAt:now,
+      schema:project.schema||4, projectId:project.id, createdAt:now, updatedAt:now,
       shots:project.shots.map(s=>Object.assign(clone(s),{projectId:project.id,status:'todo',statusAt:null,updatedAt:now})),
       refs:project.refs.map(r=>Object.assign(clone(r),{projectId:project.id})),
       notes:project.steps.map(s=>({id:'note-'+s.id,stepId:s.id,text:''})),
@@ -57,8 +57,8 @@
     load(project){
       let state=null;
       try{const raw=localStorage.getItem(key(project.id)); if(raw) state=JSON.parse(raw);}catch(e){}
-      if(state&&state.schema===2) state=fromSchema2(state,project);
-      if(!state||state.schema!==3){state=seed(project); migrateLegacy(state);}
+      // the plan was rewritten for the shoot day (schema 4); older saved states are replaced, not merged
+      if(!state||state.schema!==(project.schema||4)){state=seed(project);}
       this.save(state);
       return state;
     },
