@@ -302,3 +302,19 @@ textarea.memo:focus{border-color:var(--fg);outline:0}
 .sgif img{width:100%;max-height:260px;object-fit:contain;background:var(--soft);display:block}
 .sgif span{font-size:12px;color:var(--mute)}
 .lb-m img{width:100%;height:100%;object-fit:contain}
+
+/* 단계 구분 포인트 컬러 */
+:root{--acc:#C2611A;--acc-soft:#FBF0E6}
+.step{border-bottom:0;margin-top:22px;border-top:3px solid var(--acc)}
+.step-h{background:var(--acc-soft);padding:16px 14px;cursor:default}
+.step-h .chev{display:none}
+.step-h .sno b{color:var(--acc);font-size:30px}
+.step-h .splace{color:var(--acc);font-weight:700}
+.step-h .now{background:var(--acc)}
+.step-b{padding:20px 0 30px}
+.step.done .step-h{background:var(--soft)}
+.step.done{border-top-color:var(--faint)}
+.step.done .step-h .sno b,.step.done .step-h .splace{color:var(--mute)}
+#dots button.cur .d{background:var(--acc);border-color:var(--acc)}
+#dots button.cur{color:var(--acc)}
+#totalBar{background:var(--acc)}

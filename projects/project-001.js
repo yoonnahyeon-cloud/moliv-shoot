@@ -21,7 +21,7 @@
  "note": "",
  "refVideos": [
   {"type": "체험형", "src": "ref/experience-ref.mp4", "poster": "ref/experience-ref.jpg", "title": "관찰자 시점 상담·디자인"},
-  {"type": "후기형", "src": "ref/review-ref.mp4", "poster": "ref/review-ref.jpg", "title": "차 안 셀카 후기"},
+  {"type": "후기형", "src": "ref/review-ref.mp4", "poster": "ref/review-ref.jpg", "title": "셀카 후기"},
   {"type": "후기형", "src": "ref/review-ref2.mp4", "poster": "ref/review-ref2.jpg", "title": "수술 당일 셀카 후기"}
  ],
  "phases": [
@@ -33,8 +33,6 @@
  "steps": [
   {
    "id": "d1",
-   "gif": "ref/gif/step1.gif",
-   "gifLabel": "상담실에서 거울로 헤어라인 확인",
    "phase": "today",
    "no": "1",
    "name": "수술 전 안내",
@@ -45,8 +43,6 @@
   },
   {
    "id": "d2",
-   "gif": "ref/gif/step2.gif",
-   "gifLabel": "상담실 분위기 참고 (계약서 장면 레퍼런스 없음)",
    "phase": "today",
    "no": "2",
    "name": "계약서 작성",

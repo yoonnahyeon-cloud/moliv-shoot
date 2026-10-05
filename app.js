@@ -93,7 +93,7 @@ function card(s){
   </article>`;
 }
 function row(s){
-  const rs=refsOf(s.id); const o=open.has('c:'+s.id);
+  const rs=refsOf(s.id); const o=!open.has('x:'+s.id);
   return `<div class="cut st-${s.status}" data-id="${s.id}">
     <div class="cut-r">${stBtn(s)}
       <button class="open" data-act="toggle" aria-expanded="${o}"><span class="t">${esc(s.title)}</span>
@@ -140,7 +140,7 @@ function stepHead(st,isOpen,cur){
   </button>`;
 }
 function stepBlock(st,cur){
-  const s=stepState(st.id); const isOpen=editMode||open.has('s:'+st.id);
+  const s=stepState(st.id); const isOpen=true;
   return `<div class="step ${isOpen?'open':''} ${s.complete?'done':''}" id="step-${st.id}" data-step="${st.id}">
     ${stepHead(st,isOpen,cur)}
     ${isOpen?`<div class="step-b">${editMode?editBody(st):stepBody(st)}</div>`:''}
@@ -415,11 +415,11 @@ document.addEventListener('click',e=>{
   if(layer.contains(a)&&!['cycle','menu','zoom','addref'].includes(act)) return;
   switch(act){
     case 'cycle': setStatus(id,NEXT[shot(id).status]); break;
-    case 'toggle': { const k='c:'+id; const d=$('.cut-d',host); if(open.has(k)){open.delete(k); d.hidden=true; d.innerHTML='';} else {open.add(k); d.innerHTML=detail(shot(id)); d.hidden=false; hydrate(d);} a.setAttribute('aria-expanded',open.has(k)); break; }
+    case 'toggle': { const k='x:'+id; const d=$('.cut-d',host); if(!open.has(k)){open.add(k); d.hidden=true; d.innerHTML='';} else {open.delete(k); d.innerHTML=detail(shot(id)); d.hidden=false; hydrate(d);} a.setAttribute('aria-expanded',!open.has(k)); break; }
     case 'menu': menu(id); break;
     case 'zoom': lightbox(id,a.dataset.ref); break;
     case 'addref': refSheet(id); break;
-    case 'step': { const st=a.closest('.step').dataset.step; if(editMode) break; const k='s:'+st; open.has(k)?open.delete(k):open.add(k); renderSteps(); if(open.has(k)) scrollTo$('#step-'+st); break; }
+    case 'step': { break; const st=a.closest('.step').dataset.step; const k='s:'+st; open.has(k)?open.delete(k):open.add(k); renderSteps(); if(open.has(k)) scrollTo$('#step-'+st); break; }
     case 'gostep': openStep(a.dataset.step,true); break;
     case 'reqview': reqView(); break;
     case 'rvclose': closeReqView(); break;
