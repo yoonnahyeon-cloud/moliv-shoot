@@ -6,7 +6,7 @@
  "brand": "MOLIV",
  "title": "여자 모발이식 모델 촬영",
  "date": "2026-10-05",
- "dateLabel": "2026.10.05",
+ "dateLabel": "2026년 10월 5일 (월)",
  "model": "여자 모델 1명",
  "crewLine": [
   [
