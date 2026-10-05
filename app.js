@@ -22,7 +22,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 let open=new Set(), editMode=false, saveT=null;
 
 /* ---------- data helpers ---------- */
-function save(){clearTimeout(saveT); saveT=setTimeout(()=>{if(!adapter.save(S)) toast('저장 공간이 부족해 저장하지 못했습니다');},120);}
+function save(){clearTimeout(saveT); saveT=setTimeout(()=>{if(!adapter.save(S)) toast('저장 공간이 부족해 저장하지 못했습니다'); if(typeof syncOut==='function') syncOut();},120);}
 const shotsOf=stepId=>S.shots.filter(s=>s.stepId===stepId).sort((a,b)=>a.sort-b.sort);
 const shot=id=>S.shots.find(s=>s.id===id);
 const refsOf=id=>S.refs.filter(r=>r.shotId===id);
@@ -473,15 +473,53 @@ async function memoPull(){
   try{
     const r=await fetch(MEMO_URL+'/json?poll=1&since=all'); if(!r.ok) return;
     const latest={};
-    (await r.text()).split('\n').forEach(line=>{ if(!line.trim()) return; try{const m=JSON.parse(line); if(m.event!=='message') return; const d=JSON.parse(m.message); if(d.p!==P.id||!d.stepId) return; if(!latest[d.stepId]||d.at>latest[d.stepId].at) latest[d.stepId]=d;}catch(e){} });
-    let changed=false;
+    const recs=[];
+    (await r.text()).split('\n').forEach(line=>{ if(!line.trim()) return; try{const m=JSON.parse(line); if(m.event!=='message') return; const d=JSON.parse(m.message); if(d.p!==P.id) return; if(d.type){recs.push(d); return;} if(!d.stepId) return; if(!latest[d.stepId]||d.at>latest[d.stepId].at) latest[d.stepId]=d;}catch(e){} });
+    let changed=applyRemote(recs);
     Object.values(latest).forEach(d=>{const n=noteOf(d.stepId); if(n.dirty||(n.sharedAt&&n.sharedAt>=d.at)) return;
       n.text=d.text; n.sharedAt=d.at; changed=true;
       const ta=$(`[data-note="${d.stepId}"]`); if(ta&&document.activeElement!==ta) ta.value=d.text;
       const el=$(`[data-memoat="${d.stepId}"]`); if(el) el.textContent=memoAt(n);});
-    if(changed) save();
+    if(changed){ adapter.save(S); const typing=document.activeElement&&/^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName); if(layer.hidden&&!editMode&&!typing) renderAll(); else pendingRender=true; }
   }catch(e){}
 }
+/* cuts, checks and link references are shared the same way: every local change is published as a record,
+   and the newest record per id wins on every phone. Files uploaded from a phone stay on that phone. */
+let pendingRender=false;
+const PUB_KEY='moliv.pub.'+P.id;
+const shareable=r=>!r.blobKey;
+const sig=o=>{const c=Object.assign({},o); delete c.updatedAt; delete c.projectId; return JSON.stringify(c);};
+let pub=(()=>{try{const v=JSON.parse(localStorage.getItem(PUB_KEY)); if(v&&v.sig) return v;}catch(e){}
+  // first run: the original plan is the shared baseline, so only what changed on this phone gets published
+  const base=adapter.seed(P); const o={sig:{},at:{}};
+  base.shots.forEach(x=>o.sig['shot:'+x.id]=sig(x)); base.refs.forEach(x=>o.sig['ref:'+x.id]=sig(x)); return o;})();
+const savePub=()=>{try{localStorage.setItem(PUB_KEY,JSON.stringify(pub));}catch(e){}};
+let syncT=null;
+function syncOut(){clearTimeout(syncT); syncT=setTimeout(async()=>{
+  const cur={}; S.shots.forEach(x=>cur['shot:'+x.id]=x); S.refs.filter(shareable).forEach(x=>cur['ref:'+x.id]=x);
+  const out=[];
+  Object.entries(cur).forEach(([k,x])=>{const g=sig(x); if(pub.sig[k]!==g) out.push([k,g,{type:k.split(':')[0],id:x.id,data:x}]);});
+  Object.keys(pub.sig).forEach(k=>{if(pub.sig[k]!==null&&!cur[k]) out.push([k,null,{type:k.split(':')[0],id:k.slice(k.indexOf(':')+1),del:true}]);});
+  for(const [k,g,rec] of out){ const at=Date.now();
+    try{const r=await fetch(MEMO_URL,{method:'POST',body:JSON.stringify(Object.assign({p:P.id,at},rec))}); if(!r.ok) continue; pub.sig[k]=g; pub.at[k]=at; savePub();}catch(e){}
+  }
+},800);}
+function applyRemote(recs){
+  let changed=false;
+  recs.sort((a,b)=>a.at-b.at).forEach(d=>{
+    const k=d.type+':'+d.id; if((pub.at[k]||0)>=d.at) return;
+    const list=d.type==='shot'?S.shots:d.type==='ref'?S.refs:null; if(!list) return;
+    const i=list.findIndex(x=>x.id===d.id);
+    if(d.del){ if(i>=0) list.splice(i,1); pub.sig[k]=null; }
+    else { if(i>=0) list[i]=d.data; else list.push(d.data); pub.sig[k]=sig(d.data); }
+    pub.at[k]=d.at; changed=true;
+  });
+  if(changed) savePub();
+  return changed;
+}
+document.addEventListener('click',()=>{if(pendingRender&&layer.hidden&&!editMode){pendingRender=false; setTimeout(renderAll,0);}});
+syncOut();
+
 memoPull(); setInterval(()=>{if(document.visibilityState==='visible') memoPull();},20000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') memoPull();});
 
